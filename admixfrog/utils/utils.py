@@ -7,9 +7,11 @@ import yaml
 from numba import njit
 from scipy.linalg import expm
 
-
 Probs = namedtuple(
     "Probs", ("O", "N", "P_cont", "alpha", "beta", "rg", "alpha_hap", "beta_hap", "S")
+)
+Probs_err = namedtuple(
+    "Probs", ("O", "N", "P_cont", "alpha", "beta", "rg", "alpha_hap", "beta_hap", "S", "ref_err", "alt_err")
 )
 Pars = namedtuple(
     "Pars",
@@ -23,6 +25,15 @@ class _IX:
     def __init__(self):
         pass
 
+def _parse_ref_err(val):    # parse error rates
+    if pd.isna(val):
+        return val
+    parts = str(val).split()
+    try:
+        return [float(p) for p in parts]
+    except ValueError:
+        return [float(p.replace(',', '')) for p in parts]
+
 
 def data2probs(
     df,
@@ -34,6 +45,7 @@ def data2probs(
     ancestral=None,
     ancestral_prior=0,
     doalphabeta=True,
+    position_based_error=False,
 ):
     """create data structure that holds the reference genetic data
 
@@ -46,7 +58,6 @@ def data2probs(
     beta[n_snps, n_states] : the alt allele beta-prior
     S : States object with all states
 
-
     input:
 
     df: merged reference and SNP data. has columns tref, talt with the read
@@ -56,6 +67,10 @@ def data2probs(
     prior: None for empirical bayes prior, otherwise prior to be added
     ancestral: ancestray allele
     doalphabeta: for e.g. SFS mode, alpha and beta don't need to be calcuated
+    """
+
+    """
+    adding extra entries with ref/err and alt err
     """
 
     alt_ix = ["%s_alt" % s for s in states]
@@ -77,24 +92,45 @@ def data2probs(
     if not doalphabeta:
         if prior is None and cont_id is not None:
             ca, cb = empirical_bayes_prior(snp_df[cont_ref], snp_df[cont_alt])
-
-        P = Probs(
-            O=np.array(df.talt.values, np.uint8),
-            N=np.array(df.tref.values + df.talt.values, np.uint8),
-            P_cont=(
-                0.0
-                if cont_id is None
-                else np.array(
-                    (df[cont_ref] + ca) / (df[cont_ref] + df[cont_alt] + ca + cb)
-                )
-            ),
-            alpha=[],
-            beta=[],
-            alpha_hap=[],
-            beta_hap=[],
-            lib=np.array(df.lib),
-            S=states,
-        )
+        if position_based_error:
+            P = Probs_err(
+                O=np.array(df.talt.values, np.uint8),
+                N=np.array(df.tref.values + df.talt.values, np.uint8),
+                P_cont=(
+                    0.0
+                    if cont_id is None
+                    else np.array(
+                        (df[cont_ref] + ca)
+                        / (df[cont_ref] + df[cont_alt] + ca + cb)
+                    )
+                ),
+                alpha=[],
+                beta=[],
+                alpha_hap=[],
+                beta_hap=[],
+                lib=np.array(df.lib),
+                S=states,
+                ref_err = df['ref_err'].apply(_parse_ref_err).values,
+                alt_err = df['alt_err'].apply(_parse_ref_err).values
+            )
+        else:
+            P = Probs(
+                O=np.array(df.talt.values, np.uint8),
+                N=np.array(df.tref.values + df.talt.values, np.uint8),
+                P_cont=(
+                    0.0
+                    if cont_id is None
+                    else np.array(
+                        (df[cont_ref] + ca) / (df[cont_ref] + df[cont_alt] + ca + cb)
+                    )
+                ),
+                alpha=[],
+                beta=[],
+                alpha_hap=[],
+                beta_hap=[],
+                lib=np.array(df.lib),
+                S=states,
+            )
         return P
 
     if prior is None:  # empirical bayes, estimate from data
@@ -166,21 +202,40 @@ def data2probs(
         assert np.all(df.tref.values + df.talt.values < 256)
 
     # create named tuple for return
-    P = Probs(
-        O=np.array(df.talt.values, np.uint8),
-        N=np.array(df.tref.values + df.talt.values, np.uint8),
-        P_cont=(
-            0.0
-            if cont_id is None
-            else np.array((df[cont_ref] + ca) / (df[cont_ref] + df[cont_alt] + ca + cb))
-        ),
-        alpha=alt_prior[IX.diploid_snps],
-        beta=ref_prior[IX.diploid_snps],
-        alpha_hap=alt_prior[IX.haploid_snps],
-        beta_hap=ref_prior[IX.haploid_snps],
-        rg=np.array(df.rg),
-        S=states,
-    )
+    if position_based_error:
+        P = Probs_err(
+            O=np.array(df.talt.values, np.uint8),
+            N=np.array(df.tref.values + df.talt.values, np.uint8),
+            P_cont=(
+                0.0
+                if cont_id is None
+                else np.array((df[cont_ref] + ca) / (df[cont_ref] + df[cont_alt] + ca + cb))
+            ),
+            alpha=alt_prior[IX.diploid_snps],
+            beta=ref_prior[IX.diploid_snps],
+            alpha_hap=alt_prior[IX.haploid_snps],
+            beta_hap=ref_prior[IX.haploid_snps],
+            rg=np.array(df.rg),
+            S=states,
+            ref_err = df['ref_err'].apply(_parse_ref_err).values,
+            alt_err = df['alt_err'].apply(_parse_ref_err).values
+        )
+    else:
+        P = Probs(
+            O=np.array(df.talt.values, np.uint8),
+            N=np.array(df.tref.values + df.talt.values, np.uint8),
+            P_cont=(
+                0.0
+                if cont_id is None
+                else np.array((df[cont_ref] + ca) / (df[cont_ref] + df[cont_alt] + ca + cb))
+            ),
+            alpha=alt_prior[IX.diploid_snps],
+            beta=ref_prior[IX.diploid_snps],
+            alpha_hap=alt_prior[IX.haploid_snps],
+            beta_hap=ref_prior[IX.haploid_snps],
+            rg=np.array(df.rg),
+            S=states,
+        )
     return P
 
 

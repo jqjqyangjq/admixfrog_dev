@@ -13,8 +13,8 @@ def binom_pmf(O, N, p):
     return res
 
 
-@njit
-def p_reads_given_gt_gllmode(O, N, Pcont, c, error, n_obs):
+#@njit   #for debug
+def p_reads_given_gt_gllmode(O, N, Pcont, c, error, n_obs):    
     """calculates P(O | G); probabilty of anc/derived reads given genotype
     per read group
 
@@ -28,6 +28,50 @@ def p_reads_given_gt_gllmode(O, N, Pcont, c, error, n_obs):
 
     return read_emissions
 
+import numpy as np
+
+def gl_per_read_from_err(ref_err, alt_err, Pcont, c):
+    ref_err = np.asarray(ref_err, dtype=float)
+    alt_err = np.asarray(alt_err, dtype=float)
+    if ref_err.ndim == 0:
+        ref_err = np.array([]) if np.isnan(ref_err) else np.array([ref_err])
+    if alt_err.ndim == 0:
+        alt_err = np.array([]) if np.isnan(alt_err) else np.array([alt_err])
+    ref_err = ref_err[~np.isnan(ref_err)]
+    alt_err = alt_err[~np.isnan(alt_err)]
+
+    n_ref = len(ref_err)
+    n_alt = len(alt_err)
+
+    if n_ref + n_alt == 0:
+        raise ValueError("Both ref_err and alt_err are empty (only NaNs).")
+    alleles = np.concatenate([
+        np.zeros(n_ref, dtype=int),
+        np.ones(n_alt, dtype=int),
+    ])
+    errors = np.concatenate([ref_err, alt_err])
+
+    L = np.zeros(3, dtype=float)
+
+    for g in range(3):
+        p_true = c * Pcont + (1.0 - c) * g / 2.0
+        p_read = p_true * (1.0 - errors) + (1.0 - p_true) * errors
+        per_read = np.where(alleles == 1, p_read, 1.0 - p_read)
+        L[g] = per_read.prod()
+    return L
+def gl_per_read_multi(ref_err_list, alt_err_list, Pcont, c):
+    if len(ref_err_list) != len(alt_err_list):
+        raise ValueError("ref_err_list and alt_err_list must have the same length")
+    n_snp = len(ref_err_list)
+    L_all = np.zeros((n_snp, 3), dtype=float)
+    for i in range(n_snp):
+        L_all[i, :] = gl_per_read_from_err(
+            ref_err_list[i],
+            alt_err_list[i],
+            Pcont[i],
+            c[i]
+        )
+    return L_all
 
 def p_reads_given_gt(*args, gt_mode=False, **kwargs):
     if gt_mode:
@@ -57,9 +101,13 @@ def read2snp_emissions(read_emissions, n_snps, ix):
     return snp_emissions
 
 
-def p_snps_given_gt(P, c, error, IX, gt_mode=False):
+def p_snps_given_gt(P, c, error, IX, gt_mode=False, position_based_error=False):
     """calculates probabilty of observed read data given genotype"""
-    read_emissions = p_reads_given_gt(
+    
+    if position_based_error:
+        read_emissions = gl_per_read_multi(P.ref_err, P.alt_err, P.P_cont, c)
+    else:
+        read_emissions = p_reads_given_gt(
         P.O, P.N, P.P_cont, c, error, IX.n_obs, gt_mode=gt_mode
     )
     return read2snp_emissions(read_emissions, IX.n_snps, IX.OBS2SNP)

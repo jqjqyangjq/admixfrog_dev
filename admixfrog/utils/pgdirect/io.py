@@ -424,6 +424,243 @@ class BamFile(ComplexFile):
         return deam5[0], deam3[0], deam5
 
 
+
+class BamFile1(ComplexFile):
+    """read and process BAM-files
+
+    Note
+    ------
+    note that pysam is ZERO-indexed; i.e. the positions are one less than
+    what would be expected from e.g. running samtools pileup or checking
+    ucsc.
+
+    i.e. the first column of a bed file is what we need
+
+
+    samples : ["single", "rg", "none"]
+        how samples are defined. If single, a single sample is created.
+        if rg, a sample per read group is created
+        for other values, no samples are created and this needs to be done manually
+    """
+    """
+    incorporate position-based damage profile into input file
+    """
+    def __init__(self, *args, samples="single", **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.chroms is None:
+            bam = pysam.AlignmentFile(self.fname.format(CHROM="1"))
+        else:
+            bam = pysam.AlignmentFile(self.fname.format(CHROM=self.chroms[0]))
+
+        if "RG" in bam.header:
+            self.rgs = set(i["ID"] for i in bam.header["RG"])
+        else:
+            self.rgs = []
+
+        self.cleanup_rgs()
+        bam.close()
+
+        self.n_indel_rm = 0
+
+        if samples == "single":
+            """handled by default constructor"""
+            print(self.sample, len(self.samples))
+            self.rg2sample = defaultdict(lambda: self.sample)
+        elif samples == "rg":
+            self.samples = set()
+            self.rg2sample = dict()
+
+            for rg in self.rgs:
+                sample = Sample(self, rg)
+                self.samples.add(sample)
+                self.rg2sample[rg] = sample
+
+    def cleanup_rgs(self):
+        """get simplified read group information
+
+        some heuristic to clean up read groups learned from file.
+        currently, all readgroups starting with Phi (spike-in?)
+        are removed, and rgs starting of form "P???-12345" are
+        shortened to P???
+        """
+        self.rgs = list(
+            set(self.cleanup_rg(rg) for rg in self.rgs if not rg.startswith("Phi"))
+        )
+
+    @staticmethod
+    def cleanup_rg(rg):
+        """simplified read-group
+
+        Parameters
+        ----------
+        rg : str
+            read-group name to be simplified
+
+
+        Returns
+        -------
+        simplified rg (everything after first dash is discarded)
+        """
+        return rg.split("-")[0]
+
+    def _open_file(self, chrom):
+        """opens file for iterating in pileup mode
+        returns none if chromosome is not allowed
+        """
+        if self.chroms is not None and chrom not in self.chroms:
+            return None
+        self._handle = pysam.AlignmentFile(self.fname.format(CHROM=chrom))
+        pileup = self._handle.pileup(reference=chrom, multiple_iterators=False)
+        print(f"opening {chrom}")
+        return pileup
+
+    def process_snp(self, col):
+        """process a single pileup column"""
+        # pileup_dict is a dict[sample : read]
+        pileup_dict = self.process_pileup(col)
+        if len(pileup_dict) == 0:
+            # print("returned no data")
+            return ((sample, GTNoData()) for sample in self.samples)
+        else:
+            return ((sample, ReadGT(data)) for sample, data in pileup_dict.items())
+
+    def no_data_default(self, chrom, pos):
+        return ((s, GTNoData()) for s in self.samples)
+
+    @property
+    def _offset(self):
+        return 0
+
+    # from Martin, added R
+    # def process_pileup(column, ref_base):
+    def process_pileup(self, column):
+        """Process pileup column
+
+        This function extracts some basic info from aligned reads at a
+        particular position.
+        For each read, it returns the tuple
+        (rg, deam), base, len
+        where
+
+            - rg is the read group
+            - deam is the deaination pattern
+            - base is the particular base at this position
+            - len is the total length of the read
+
+
+        Arguments
+        ---------
+        column : pysam.Pileup.column
+            all reads overlapping a single position
+
+
+        Returns
+        -------
+        list(tuple)
+        """
+        pileup = defaultdict(list)
+        # walk through all reads overlapping the current column
+        # and accumulate bases at that position
+        for pileup_read in column.pileups:
+            r = self.process_read(pileup_read)
+            if r is not None:
+                pileup[self.rg2sample[r.RG]].append(r)
+
+        return pileup
+
+    def process_read(self, pileup_read):
+        if pileup_read.is_del:
+            return None
+
+        A = pileup_read.alignment
+
+        if "I" in A.cigarstring or "D" in A.cigarstring or "N" in A.cigarstring:
+            self.n_indel_rm += 1
+            return None
+        if "S" in A.cigarstring:
+            return None
+
+        mapq = A.mapping_quality
+        ref_seq = A.get_reference_sequence()
+        pos_in_read = pileup_read.query_position
+        read_len = A.query_length
+        read_base = A.query_sequence[pos_in_read]
+        try:
+            ref_base = ref_seq[pos_in_read].upper()
+        except IndexError:
+            # print("no ref", ref_seq, pos_in_read, A.cigarstring)
+            # print("no re2", A.query_sequence, pos_in_read, A.cigarstring)
+            return None
+
+        try:
+            read_group = BamFile.cleanup_rg(A.get_tag("RG"))
+        except KeyError:
+            try:
+                # guess RG from XI XJ tag, which in some bam files are p7/p5 ix
+                read_group = f'{A.get_tag("XI")}-{A.get_tag("XJ")}'
+            except KeyError:
+                read_group = "NONE"
+        try:
+            baseq = ord(A.qual[pos_in_read]) - 33
+        except UnicodeDecodeError:
+            baseq = 0
+
+        # deam_type = BamFile.get_deamination_type(A, ref_seq, A.is_reverse)
+        d5, d3, deam_full = BamFile.get_deamination_pattern(A, ref_seq)
+        deam_pattern = d5, d3
+
+        if read_base in "ACGT":
+            tpl = Read(
+                read_group,
+                deam_pattern,
+                read_base,
+                read_len,
+                baseq,
+                mapq,
+                A.is_reverse,
+                pos_in_read,
+                deam_full,
+            )
+            return tpl
+        else:
+            return None
+
+    @staticmethod
+    def get_deamination_pattern(A, ref_seq):
+        fwd_iter = zip(ref_seq, A.query_sequence)
+        bwd_iter = zip(ref_seq[::-1], A.query_sequence[::-1])
+        if A.is_reverse:
+            deam5 = [i for i, (r, q) in enumerate(fwd_iter) if r == "g" and q == "A"]
+            deam3 = [i for i, (r, q) in enumerate(bwd_iter) if r == "g" and q == "A"]
+        else:
+            deam5 = [i for i, (r, q) in enumerate(fwd_iter) if r == "c" and q == "T"]
+            deam3 = [i for i, (r, q) in enumerate(bwd_iter) if r == "c" and q == "T"]
+
+        if len(deam5) == 0 or len(deam3) == 0:
+            return -1, -1, []
+
+        return deam5[0], deam3[0], deam5
+    
+    @staticmethod
+    def get_position_based_deamination_pattern(A, ref_seq):
+        """
+        get position-based deamination pattern Jiaqi
+        """
+        fwd_iter = zip(ref_seq, A.query_sequence)
+        bwd_iter = zip(ref_seq[::-1], A.query_sequence[::-1])
+        if A.is_reverse:
+            deam5 = [i for i, (r, q) in enumerate(fwd_iter) if r == "g" and q == "A"]
+            deam3 = [i for i, (r, q) in enumerate(bwd_iter) if r == "g" and q == "A"]
+        else:
+            deam5 = [i for i, (r, q) in enumerate(fwd_iter) if r == "c" and q == "T"]
+            deam3 = [i for i, (r, q) in enumerate(bwd_iter) if r == "c" and q == "T"]
+
+        if len(deam5) == 0 or len(deam3) == 0:
+            return -1, -1, []
+
+        return deam5, deam3
+
+
 class BamFileFilter(BamFile):
     def __init__(
         self,

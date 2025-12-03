@@ -151,6 +151,12 @@ def run_frog():
     parser.add_argument(
         "--seed", help="random number generator seed for resampling", default=None
     )
+    parser.add_argument(
+        "--position-based-error",
+        action="store_true",
+        default=False,
+        help="""use position-based error rates, .in.xz must contain ref_err and alt_err columns when generating input with --error-file """,
+    )
 
     add_target_file_options(parser)
     add_geno_options(parser)

@@ -275,6 +275,10 @@ def load_read_data(
     dtype_mandatory = dict(
         chrom="category", pos=np.uint32, talt=np.uint8, tref=np.uint8
     )
+    # add pos_based error pattern
+    dtype_mandatory = dict(
+        chrom="category", pos=np.uint32, talt=np.uint8, tref=np.uint8, ref_err = str, alt_err = str
+    )
 
     dtype_optional = dict(
         lib=str, rg=str, score=int, deam=np.int16, len=np.uint8, dmgpos=bool
@@ -288,6 +292,11 @@ def load_read_data(
     data = pd.read_csv(
         infile, dtype=dtype_mandatory, usecols=dtype_mandatory.keys()
     ).dropna()
+    ## keep NA, as alt_err may be none
+    data = pd.read_csv(
+        infile, dtype=dtype_mandatory, usecols=dtype_mandatory.keys()
+    )
+    
     data.set_index(["chrom", "pos"], inplace=True)
 
     if "rg" not in data:

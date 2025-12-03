@@ -94,6 +94,23 @@ def bam():
             to underflow errors in admixfrog
         """,
     )
+    parser.add_argument(
+        "--error-file",
+        "--position-based-error-file",
+        type=str,
+        help="""a 4 column tab/space-delimited file, lib_name, pos, CT_error, GA_error
+        pos values are determined in snpAD format: 0:14, from 5'end to middle; 15:29: from middle to 3'end; 30: more than 30bp distant from either end
+        """,
+    )
+    parser.add_argument(
+        "--flat-error",
+        "--flat-error-for-all-substitutions",
+        type=str,
+        default = "0.002",
+        help="""error rate for all non-c-t and non-g-a substitutions. string type(easier for downstream processing)
+        """,
+    )
+
     add_target_file_options(parser)
     args = vars(parser.parse_args())
 

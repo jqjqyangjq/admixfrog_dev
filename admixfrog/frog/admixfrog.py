@@ -44,6 +44,7 @@ def baum_welch(
     ll_tol=1e-1,
     gt_mode=False,
     scale_probs=True,
+    position_based_error=False,
 ):
     O = est_options
     alpha0, alpha0_hap, trans, trans_hap, cont, error, F, tau, sex = pars
@@ -86,6 +87,7 @@ def baum_welch(
         O["est_inbreeding"],
         gt_mode,
         scale_probs=scale_probs,
+        position_based_error=position_based_error,
     )  # return value here is SNP
 
     e_scaling = update_emissions(E, SNP, P, IX, scale_probs=scale_probs)  # P(O | Z)
@@ -432,7 +434,7 @@ def load_admixfrog_data(
     return df, ix, sex, tot_n_snps
 
 
-def run_admixfrog(
+def run_admixfrog(     # decide if position-based error should be taken into account
     target_file,
     ref_files,
     geno_file=None,
@@ -468,6 +470,7 @@ def run_admixfrog(
     deam_bin_size=50000,
     len_bin_size=1000,
     sex_chroms="X,Y,Z,W",
+    position_based_error=False,
     **kwargs,
 ):
     """admixture fragment inference
@@ -538,6 +541,7 @@ def run_admixfrog(
         prior=prior,
         ancestral=ancestral,
         ancestral_prior=ancestral_prior,
+        position_based_error=position_based_error,
     )
     logging.info("done creating prior")
 
@@ -552,7 +556,7 @@ def run_admixfrog(
     )
 
     Z, G, pars, ll, emissions, hemissions, (_, beta, n), (_, bhap, nhap) = baum_welch(
-        P, IX, pars, gt_mode=gt_mode, est_options=est, **kwargs
+        P, IX, pars, gt_mode=gt_mode, est_options=est, position_based_error=position_based_error, **kwargs
     )
 
     # output formating from here

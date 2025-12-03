@@ -85,6 +85,7 @@ def update_snp_prob(
     est_inbreeding=False,
     gt_mode=False,
     scale_probs=True,
+    position_based_error=False,
 ):
     """
     calculate P(O, G |Z) = P(O | G) P(G | Z)
@@ -103,7 +104,7 @@ def update_snp_prob(
     assert np.allclose(np.sum(SNP[IX.diploid_snps], 2), 1)
 
     # get P(O | G)
-    ll_snp = p_snps_given_gt(P, cflat, eflat, IX, gt_mode)
+    ll_snp = p_snps_given_gt(P, cflat, eflat, IX, gt_mode, position_based_error)
 
     SNP *= ll_snp[:, np.newaxis, :]
     log_scaling = scale_mat3d(SNP) if scale_probs else 0

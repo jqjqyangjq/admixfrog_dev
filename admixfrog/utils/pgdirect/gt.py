@@ -156,6 +156,7 @@ class ReadGT(GT):
         max_length=1000,
         minq=25,
         minmapq=25,
+        error_file = None,     #
     ):
         if read.len < min_length or read.len > max_length:
             return False
