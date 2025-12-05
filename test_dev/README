@@ -1,0 +1,13 @@
+# if incorporating position-based damage rate.  also need to provide an error rate for all non-C-to-T and non-G-to-A substitutions, which I set to 0.002
+# Otherwise, it writes the normal admixfrog in.file.xz
+admixfrog-bam  --ref  ref.chr21.xz --chroms 21 --bamfile SSlib.bam --error-file SSlib.error_profile --flat-error 0.002 --out SSlib.in.xz 
+
+
+
+# to incorporate damage rates in the in.xz, add parameter --position-based-error
+# otherwise, it will run as the original mode
+
+
+admixfrog --ref ref.chr21.xz --infile SSlib.in.xz --out out_notusingerr/out  -b 2000 --max-iter 500 --states AFR DEN NEA --cont AFR --filter-pos 50 --ancestral ANC --filter-map 0 --run-penalty 0.2 --pos-mode --ll-tol 1e-2 --n-post-replicates 100 --init-guess AFR 
+
+admixfrog --ref ref.chr21.xz --infile SSlib.in.xz --out out_usingerr/out  -b 2000 --max-iter 500 --states AFR DEN NEA --cont AFR --filter-pos 50 --ancestral ANC --filter-map 0 --run-penalty 0.2 --pos-mode --ll-tol 1e-2 --n-post-replicates 100 --init-guess AFR --position-based-error
