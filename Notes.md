@@ -46,8 +46,11 @@ p   & \text{if read}_i = \text{alt} \\
 $$
 
 And $p$ is calculated in a similar way as above, but the error rate is now substitution-dependent  
-(ref base, alt base, strand of the allele, observed allele):
+(depends on ref base, alt base, strand of the allele, observed allele).  
+Typically,
+for a forward strand T allele at a c/t position, the error will range between 40% to 2% for non-UDG-SS lib.  
+for most others, I (arbitrarily) set to 0.002.
 
 $$
-p = p(1 - \text{error}_{\text{current}}) + (1-p)\,\text{error}_{\text{current}}
+p = p(1 - \text{error}_{\text{current}}) + (1-p)\text{error}_{\text{current}}
 $$
