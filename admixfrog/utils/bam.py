@@ -58,7 +58,7 @@ class AdmixfrogInput(pg.ExtCoverage):
 
     def preprocess(self, sampleset):
         self.f = lzma.open(self.outfile, "wt")
-        if self.error_dict is not None:
+        if self.error_dict is not None:    # reformat the admixfrog-input file header
             print(
                 "chrom",
                 "pos",
@@ -173,48 +173,48 @@ class AdmixfrogInput(pg.ExtCoverage):
                     D[r.RG, DEAM, LEN].n_deam += 1
                 elif r.base != "N":
                     D[r.RG, DEAM, LEN].n_other += 1
-            if self.error_dict is not None:               
-                for (rg, deam, len_), r in D.items():
-                    if self.length_bin_size is None:
-                        lib = f"{rg}_{deam}"
-                    else:
-                        lib = f"{rg}_{len_}_{deam}"
-                    if self.report_alleles:
-                        alleles = "".join(sorted(snp.ref + snp.alt))
-                        lib = f"{lib}_{alleles}"
-                    print(
-                        snp.chrom,
-                        snp.pos + 1,
-                        lib,
-                        r.n_ref,
-                        r.n_alt,
-                        r.n_deam,
-                        r.n_other,
-                        " ".join(r.ref_err),
-                        " ".join(r.alt_err),
-                        file=self.f,
-                        sep=",",
-                    )
-            else:
-                for (rg, deam, len_), r in D.items():
-                    if self.length_bin_size is None:
-                        lib = f"{rg}_{deam}"
-                    else:
-                        lib = f"{rg}_{len_}_{deam}"
-                    if self.report_alleles:
-                        alleles = "".join(sorted(snp.ref + snp.alt))
-                        lib = f"{lib}_{alleles}"
-                    print(
-                        snp.chrom,
-                        snp.pos + 1,
-                        lib,
-                        r.n_ref,
-                        r.n_alt,
-                        r.n_deam,
-                        r.n_other,
-                        file=self.f,
-                        sep=",",
-                    )
+        if self.error_dict is not None:               
+            for (rg, deam, len_), r in D.items():
+                if self.length_bin_size is None:
+                    lib = f"{rg}_{deam}"
+                else:
+                    lib = f"{rg}_{len_}_{deam}"
+                if self.report_alleles:
+                    alleles = "".join(sorted(snp.ref + snp.alt))
+                    lib = f"{lib}_{alleles}"
+                print(
+                    snp.chrom,
+                    snp.pos + 1,
+                    lib,
+                    r.n_ref,
+                    r.n_alt,
+                    r.n_deam,
+                    r.n_other,
+                    " ".join(r.ref_err),
+                    " ".join(r.alt_err),
+                    file=self.f,
+                    sep=",",
+                )
+        else:
+            for (rg, deam, len_), r in D.items():
+                if self.length_bin_size is None:
+                    lib = f"{rg}_{deam}"
+                else:
+                    lib = f"{rg}_{len_}_{deam}"
+                if self.report_alleles:
+                    alleles = "".join(sorted(snp.ref + snp.alt))
+                    lib = f"{lib}_{alleles}"
+                print(
+                    snp.chrom,
+                    snp.pos + 1,
+                    lib,
+                    r.n_ref,
+                    r.n_alt,
+                    r.n_deam,
+                    r.n_other,
+                    file=self.f,
+                    sep=",",
+                )
 
 
 class AdmixfrogInput2(pg.ExtCoverage):

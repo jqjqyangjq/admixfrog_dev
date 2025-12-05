@@ -251,6 +251,7 @@ def load_read_data(
     len_bin_size=1000,
     high_cov_filter=0.001,
     make_bins=False,
+    position_based_error = False,
 ):
     """loading the read data, second generation of input file.
     The idea here (and chief difference to the previous vesion) is that the
@@ -276,10 +277,14 @@ def load_read_data(
         chrom="category", pos=np.uint32, talt=np.uint8, tref=np.uint8
     )
     # add pos_based error pattern
-    dtype_mandatory = dict(
-        chrom="category", pos=np.uint32, talt=np.uint8, tref=np.uint8, ref_err = str, alt_err = str
-    )
-
+    if position_based_error:
+        dtype_mandatory = dict(
+            chrom="category", pos=np.uint32, talt=np.uint8, tref=np.uint8, ref_err = str, alt_err = str
+        )
+    else:
+        dtype_mandatory = dict(
+            chrom="category", pos=np.uint32, talt=np.uint8, tref=np.uint8
+        )
     dtype_optional = dict(
         lib=str, rg=str, score=int, deam=np.int16, len=np.uint8, dmgpos=bool
     )

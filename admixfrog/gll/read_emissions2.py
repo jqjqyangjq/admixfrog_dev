@@ -13,7 +13,7 @@ def binom_pmf(O, N, p):
     return res
 
 
-#@njit   #for debug
+@njit   #for debug
 def p_reads_given_gt_gllmode(O, N, Pcont, c, error, n_obs):    
     """calculates P(O | G); probabilty of anc/derived reads given genotype
     per read group
@@ -29,6 +29,34 @@ def p_reads_given_gt_gllmode(O, N, Pcont, c, error, n_obs):
     return read_emissions
 
 import numpy as np
+
+
+"""
+for N observations, assuming we have ref_err and alt_err, each with shape (N,2), examples are:
+ref_err = [[err1.1, err1.2], [err2.1...], [Nan], ...]
+alt_err = [[Nan], [Nan], [err3.1], ...]
+
+we want to have L: [P(O|G=1), P(O|G=0), P(O|G=2)] for each observation 
+
+
+example:
+for ref_alt record, we have alleles [0,0, 1] if we have 2 refs and 1 alt
+with errors [err_ref1, err_ref2, err_alt1]
+or we have alleles [0, 0] with errors [err_ref1, err_ref2]
+
+
+for g=0
+P(read_1 | g=0) * P(read_2 | g=0) * P(read_3 | g=0) ... 
+for g=1
+P(read_1 | g=1) * P(read_2 | g=1) * ... 
+for g=2
+P(read_1 | g=2) * P(read_2 | g=2) * ... 
+
+read_i = p if allele is alt
+read_i = 1-p if allele is ref
+
+"""
+
 
 def gl_per_read_from_err(ref_err, alt_err, Pcont, c):
     ref_err = np.asarray(ref_err, dtype=float)
@@ -54,11 +82,13 @@ def gl_per_read_from_err(ref_err, alt_err, Pcont, c):
     L = np.zeros(3, dtype=float)
 
     for g in range(3):
-        p_true = c * Pcont + (1.0 - c) * g / 2.0
-        p_read = p_true * (1.0 - errors) + (1.0 - p_true) * errors
+        p_true = c * Pcont + (1.0 - c) * g / 2.0  # same as original code
+        p_read = p_true * (1.0 - errors) + (1.0 - p_true) * errors  #same as original code
         per_read = np.where(alleles == 1, p_read, 1.0 - p_read)
         L[g] = per_read.prod()
     return L
+
+
 def gl_per_read_multi(ref_err_list, alt_err_list, Pcont, c):
     if len(ref_err_list) != len(alt_err_list):
         raise ValueError("ref_err_list and alt_err_list must have the same length")

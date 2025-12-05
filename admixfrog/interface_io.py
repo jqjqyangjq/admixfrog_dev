@@ -134,6 +134,7 @@ def bam():
         del args["vcfgt"]
         del args["target"]
         #del args["chroms"]
+
         process_bam(**args)
 
 

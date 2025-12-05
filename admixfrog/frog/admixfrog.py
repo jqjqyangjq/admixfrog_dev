@@ -303,6 +303,7 @@ def load_admixfrog_data(
     deam_bin_size=100000,
     len_bin_size=10000,
     sex_chroms="X,Y,Z,W",
+    position_based_error = False
 ):
     """
     we have the following possible input files
@@ -321,7 +322,7 @@ def load_admixfrog_data(
             filter=filter,
             target_ind=target,
             guess_ploidy=guess_ploidy,
-            pos_mode=pos_mode,
+            pos_mode=pos_mode
         )
         ix = None
 
@@ -361,6 +362,7 @@ def load_admixfrog_data(
                 len_bin_size=len_bin_size,
                 deam_bin_size=deam_bin_size,
                 high_cov_filter=hcf,
+                position_based_error=position_based_error
             )
             # data = data[["rg", "tref", "talt"]]
 
@@ -524,6 +526,7 @@ def run_admixfrog(     # decide if position-based error should be taken into acc
         deam_bin_size=deam_bin_size,
         len_bin_size=len_bin_size,
         sex_chroms=sex_chroms,
+        position_based_error = position_based_error
     )
 
     logging.info("done loading data")
