@@ -62,5 +62,6 @@ $$
 The error now depends on ref base, alt base, strand of the allele, observed allele.  
 Typically,
 for a forward strand T allele at a c/t position, the error will range between 40% to 2% for non-UDG-SS lib.  
-for most others, I (arbitrarily) set to 0.002.
-
+for most others, I (arbitrarily) set to 0.002 (can be any other baseline).  
+e.g. For a C(ref)-T(alt) sites, if there are 3 ref and 2 alts (one +, one -) observed  
+the error rate matrix can be [0.002, 0.002, 0.002, 0.002, f(C-T at this pos)]
