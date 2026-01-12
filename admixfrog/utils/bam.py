@@ -129,7 +129,7 @@ class AdmixfrogInput(pg.ExtCoverage):
                             D[r.RG, DEAM, LEN].ref_err.append(flat_error)
                     elif snp.ref == "G" and snp.alt == "A":  # r.base == G
                         D[r.RG, DEAM, LEN].ref_err.append(flat_error)
-                    elif snp.ref == "A" and snp.alt == "G":  # r.base = A
+                    elif snp.ref == "A" and snp.alt == "G":  # r.base == A
                         if r.is_reverse:
                             D[r.RG, DEAM, LEN].ref_err.append(self.error_dict[r.RG]['GA'][pos_terminal])
                         else:
@@ -341,14 +341,15 @@ def process_bam(
     logging.info("Filter is %s", default_filter)
     if error_file is not None:
         error_dict = defaultdict(lambda: defaultdict(dict))
-        with open(error_file, "r") as ef:
-            for i_, line in enumerate(ef):
-                if i_ == 0:
-                    continue
-                lib_name, pos, CT_error, GA_error = line.strip().split()
-                error_dict[lib_name]['CT'][int(pos)] = CT_error
-                error_dict[lib_name]['GA'][int(pos)] = GA_error
-        for i in error_dict:
+        for error_file_ in error_file:
+            with open(error_file_, "r") as ef:
+                for i_, line in enumerate(ef):
+                    if i_ == 0:
+                        continue
+                    lib_name, pos, CT_error, GA_error = line.strip().split()
+                    error_dict[lib_name]['CT'][int(pos)] = CT_error
+                    error_dict[lib_name]['GA'][int(pos)] = GA_error
+            for i in error_dict:
             print(f"Lib {i} has position-based error rates loaded.")
             print("pos\tCT_error\tGA_error")
             for pos in range(0,31):

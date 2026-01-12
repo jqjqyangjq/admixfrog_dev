@@ -14,7 +14,7 @@ g = [0, 1, 2]
 $$
 
 $$
-p = c \cdot P_{\text{cont}} + (1-c) \cdot \frac{g}{2}
+p' = c \cdot P_{\text{cont}} + (1-c) \cdot \frac{g}{2}
 $$
 
 $$
@@ -42,7 +42,7 @@ g = [0, 1, 2]
 $$
 
 $$
-p = c \cdot P_{\text{cont}} + (1-c) \cdot \frac{g}{2}
+p' = c \cdot P_{\text{cont}} + (1-c) \cdot \frac{g}{2}
 $$
 
 $$
