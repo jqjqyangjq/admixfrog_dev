@@ -97,9 +97,11 @@ def bam():
     parser.add_argument(
         "--error-file",
         "--position-based-error-file",
-        type=str,
+        nargs = '+', 
+        default= None,
         help="""a 4 column tab/space-delimited file, lib_name, pos, CT_error, GA_error
-        pos values are determined in snpAD format: 0:14, from 5'end to middle; 15:29: from middle to 3'end; 30: more than 30bp distant from either end
+        pos values are determined in snpAD format: 0:14, from 5'end to middle; 15:29: from middle to 3'end; 30: more than 30bp distant from either end.
+        can be multiple, e.g. per library
         """,
     )
     parser.add_argument(
