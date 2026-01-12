@@ -87,6 +87,7 @@ class AdmixfrogInput(pg.ExtCoverage):
     def process_snp(self, block, snp):    # error dic to add
 
         flat_error = self.flat_error
+        flat_error = float(flat_error)
         reads = snp.reads(**self.kwargs)
         D = defaultdict(lambda: self.Obs())
         # n_ref, n_alt, n_deam, n_other = 0, 0, 0, 0
@@ -124,14 +125,14 @@ class AdmixfrogInput(pg.ExtCoverage):
                         D[r.RG, DEAM, LEN].ref_err.append(flat_error)
                     elif snp.ref == "T" and snp.alt == "C":  # r.base = T
                         if not r.is_reverse:
-                            D[r.RG, DEAM, LEN].ref_err.append(self.error_dict[r.RG]['CT'][pos_terminal])
+                            D[r.RG, DEAM, LEN].ref_err.append(self.error_dict[r.RG]['CT'][pos_terminal]+flat_error)
                         else:
                             D[r.RG, DEAM, LEN].ref_err.append(flat_error)
                     elif snp.ref == "G" and snp.alt == "A":  # r.base == G
                         D[r.RG, DEAM, LEN].ref_err.append(flat_error)
                     elif snp.ref == "A" and snp.alt == "G":  # r.base == A
                         if r.is_reverse:
-                            D[r.RG, DEAM, LEN].ref_err.append(self.error_dict[r.RG]['GA'][pos_terminal])
+                            D[r.RG, DEAM, LEN].ref_err.append(self.error_dict[r.RG]['GA'][pos_terminal]+flat_error)
                         else:
                             D[r.RG, DEAM, LEN].ref_err.append(flat_error)
                     else:
@@ -140,19 +141,18 @@ class AdmixfrogInput(pg.ExtCoverage):
                     D[r.RG, DEAM, LEN].n_alt += 1
                     if snp.ref == "C" and snp.alt == "T":    # r.base == T
                         if not r.is_reverse:
-                            D[r.RG, DEAM, LEN].alt_err.append(self.error_dict[r.RG]['CT'][pos_terminal])
+                            D[r.RG, DEAM, LEN].alt_err.append(self.error_dict[r.RG]['CT'][pos_terminal]+flat_error)
                         else:
                             D[r.RG, DEAM, LEN].alt_err.append(flat_error)
                     elif snp.ref == "T" and snp.alt == "C":  # r.base = C
                         D[r.RG, DEAM, LEN].alt_err.append(flat_error)
                     elif snp.ref == "G" and snp.alt == "A":  # r.base == A
                         if r.is_reverse:
-                            D[r.RG, DEAM, LEN].alt_err.append(self.error_dict[r.RG]['GA'][pos_terminal])
+                            D[r.RG, DEAM, LEN].alt_err.append(self.error_dict[r.RG]['GA'][pos_terminal]+flat_error)
                         else:
                             D[r.RG, DEAM, LEN].alt_err.append(flat_error)
                     else:
                         D[r.RG, DEAM, LEN].alt_err.append(flat_error)
-
                 elif r.base == "T" and not r.is_reverse and "C" in (snp.ref, snp.alt):
                     D[r.RG, DEAM, LEN].n_deam += 1
                 elif r.base == "A" and r.is_reverse and "G" in (snp.ref, snp.alt):
@@ -190,8 +190,8 @@ class AdmixfrogInput(pg.ExtCoverage):
                     r.n_alt,
                     r.n_deam,
                     r.n_other,
-                    " ".join(r.ref_err),
-                    " ".join(r.alt_err),
+                    " ".join([str(x) for x in r.ref_err]),
+                    " ".join([str(x) for x in r.alt_err]),
                     file=self.f,
                     sep=",",
                 )
@@ -347,9 +347,9 @@ def process_bam(
                     if i_ == 0:
                         continue
                     lib_name, pos, CT_error, GA_error = line.strip().split()
-                    error_dict[lib_name]['CT'][int(pos)] = CT_error
-                    error_dict[lib_name]['GA'][int(pos)] = GA_error
-            for i in error_dict:
+                    error_dict[lib_name]['CT'][int(pos)] = float(CT_error)
+                    error_dict[lib_name]['GA'][int(pos)] = float(GA_error)
+        for i in error_dict:
             print(f"Lib {i} has position-based error rates loaded.")
             print("pos\tCT_error\tGA_error")
             for pos in range(0,31):

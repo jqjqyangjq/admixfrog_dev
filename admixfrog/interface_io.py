@@ -107,8 +107,8 @@ def bam():
     parser.add_argument(
         "--flat-error",
         "--flat-error-for-all-substitutions",
-        type=str,
-        default = "0.002",
+        type=float,
+        default = "0.01",
         help="""error rate for all non-c-t and non-g-a substitutions. string type(easier for downstream processing)
         """,
     )
