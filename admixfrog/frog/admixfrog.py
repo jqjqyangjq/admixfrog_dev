@@ -209,11 +209,12 @@ def update_emission_stuff(
     O = est_options
     cond_cont = O["est_contamination"] and (it % O["freq_contamination"] == 0 or it < 3)
     cond_Ftau = O["est_F"] or O["est_tau"] and (it % O["freq_F"] == 0 or it < 3)
+    cond_est_err = O["est_error"]
 
-    if cond_Ftau or cond_cont:  # and gll_mode:
+    if cond_Ftau or cond_cont or cond_est_err:  # and gll_mode:
         update_post_geno(PG, SNP, Z, IX)
 
-    if cond_cont and not gt_mode:
+    if (cond_cont or cond_est_err) and not gt_mode:
         delta = update_contamination(cont, error, P, PG, IX, est_options)
         if delta < 1e-5:  # when we converged, do not update contamination
             O["est_contamination"], cond_cont = False, False
@@ -225,7 +226,7 @@ def update_emission_stuff(
             O["est_F"], O["est_tau"] = False, False
             cond_Ftau, cond_F = False, False
             logging.info("stopping Ftau updates")
-    if cond_Ftau or cond_cont:
+    if cond_Ftau or cond_cont or cond_est_err:
         s_scaling = update_snp_prob(
             SNP,
             P,
