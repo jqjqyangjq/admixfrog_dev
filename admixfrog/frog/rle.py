@@ -79,7 +79,7 @@ def get_rle(data, states, penalty=0.5):
         chroms = pd.unique(data.chrom)
         runs = []
         for chrom in chroms:
-            runs_by_chrom = get_runs(data.loc[data.chrom==chrom])
+            runs_by_chrom = get_runs(data.loc[data.chrom==chrom], penalty=penalty)
             runs_by_chrom['chrom'] = chrom
             if len(runs_by_chrom) > 0:
                 runs.append(runs_by_chrom)

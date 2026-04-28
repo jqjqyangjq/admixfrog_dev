@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import pandas as pd
 import itertools
@@ -562,7 +564,6 @@ def run_admixfrog(     # decide if position-based error should be taken into acc
     Z, G, pars, ll, emissions, hemissions, (_, beta, n), (_, bhap, nhap) = baum_welch(
         P, IX, pars, gt_mode=gt_mode, est_options=est, position_based_error=position_based_error, **kwargs
     )
-
     # output formating from here
     if output["output_pars"]:
         df_pars = write_pars_table(pars, outname=f"{outname}.pars.yaml")

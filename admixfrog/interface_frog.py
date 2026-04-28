@@ -44,7 +44,7 @@ def do_rle():
     states = list(data.columns)[7:]
     homo = [s for s in states if sum(s in ss for ss in states) > 1]
     homo = States(homo)
-
+    print("run_penalty:", args.run_penalty)
     rle = get_rle(data, homo, args.run_penalty)
     rle.to_csv(args.outfile, float_format="%.6f", index=False)
 
@@ -336,7 +336,8 @@ def run_frog():
     from . import __version__
 
     logging.info("admixfrog %s", __version__)
-
+    #test
+    print("run_admixfrog")
     # run stuff
     run_admixfrog(
         **V,
